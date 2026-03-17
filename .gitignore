@@ -5,6 +5,8 @@ build/
 # Node
 node_modules/
 dist/
+*.tsbuildinfo
+*.config.d.ts
 
 # IDE
 .idea/

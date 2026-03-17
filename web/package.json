@@ -4,6 +4,11 @@
   "type": "module",
   "main": "dist/simulation-web.js",
   "files": ["dist"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yarkivaev/simulation-dsl",
+    "directory": "web"
+  },
   "scripts": {
     "build": "vue-tsc -b && vite build",
     "test": "vitest run --passWithNoTests"
@@ -14,6 +19,7 @@
     "monaco-editor": "^0.52.2"
   },
   "devDependencies": {
+    "@types/node": "^22.13.5",
     "@vitejs/plugin-vue": "^5.2.3",
     "monaco-editor": "^0.52.2",
     "typescript": "^5.7.3",

@@ -1,1 +1,0 @@
-{"root":["./src/env.d.ts","./src/main.ts","./src/router.ts","./src/api/http.ts","./src/api/types.ts","./src/approot.vue","./src/pages/simulationspage.vue","./src/pages/stationspage.vue"],"version":"5.9.3"}
