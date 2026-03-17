@@ -2,10 +2,43 @@ name: Java Release
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['build.gradle']
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get version from build.gradle
+        id: version
+        run: |
+          VERSION=$(grep "^version" build.gradle | sed "s/version *= *['\"]//;s/['\"]//")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+      - name: Check version against tags
+        id: check
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          LATEST=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n1)
+          if [ -z "$LATEST" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ "$(printf '%s\n' "$LATEST" "$VERSION" | sort -V | tail -n1)" != "$VERSION" ] || [ "$LATEST" = "$VERSION" ]; then
+            echo "Error: build.gradle version ($VERSION) must be greater than latest tag (v$LATEST)"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "should_release=true" >> $GITHUB_OUTPUT
+
   test:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,8 +49,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew test
 
+  tag:
+    needs: [check-version, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a "v${{ needs.check-version.outputs.version }}" -m "Release v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
+
   publish:
-    needs: test
+    needs: [check-version, tag]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -30,8 +79,6 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Publish to GitHub Packages
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew publish -Pversion="${VERSION}"
+        run: ./gradlew publish -Pversion="${{ needs.check-version.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
