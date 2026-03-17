@@ -8,9 +8,8 @@ on:
     paths: ['web/**']
 
 jobs:
-  ci:
-    uses: yarkivaev/npm-workflows/.github/workflows/ci.yml@main
+  test:
+    uses: yarkivaev/npm-workflows/.github/workflows/test.yml@main
     with:
       node-version: '22'
-      lint: false
       working-directory: web
