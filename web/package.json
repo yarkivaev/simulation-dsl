@@ -1,6 +1,6 @@
 {
   "name": "@yarkivaev/simulation-web",
-  "version": "1.0.1",
+  "version": "0.0.0",
   "type": "module",
   "main": "dist/simulation-web.js",
   "files": ["dist"],
