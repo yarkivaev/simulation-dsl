@@ -1,0 +1,1 @@
+{"root":["./src/env.d.ts","./src/index.ts","./src/api/http.ts","./src/api/types.ts","./src/components/dsleditor.vue","./src/components/simulationcontrol.vue","./src/components/simulationlayout.vue","./src/pages/scenariospage.vue"],"version":"5.9.3"}

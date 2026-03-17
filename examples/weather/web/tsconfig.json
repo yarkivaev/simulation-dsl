@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "importHelpers": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@yarkivaev/simulation-web": ["../../../web/src/index.ts"]
+    },
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

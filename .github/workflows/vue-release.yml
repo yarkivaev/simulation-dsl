@@ -1,0 +1,17 @@
+name: Vue Release
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/package.json']
+
+jobs:
+  release:
+    uses: yarkivaev/npm-workflows/.github/workflows/release.yml@main
+    with:
+      node-version: '22'
+      lint: false
+      working-directory: web
+    permissions:
+      contents: write
+      id-token: write
