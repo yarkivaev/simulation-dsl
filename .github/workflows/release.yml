@@ -112,9 +112,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
+      - run: npm install -g npm@latest
       - run: npm ci
       - name: Set version and publish
         run: |
