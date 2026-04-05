@@ -1,15 +1,14 @@
 package io.yarkivaev.sim.runtime;
 
 import io.yarkivaev.sim.distribution.Constant;
-import io.yarkivaev.sim.dsl.ProcedureDef;
 import io.yarkivaev.sim.dsl.Scenario;
 import io.yarkivaev.sim.dsl.SignalDef;
 import io.yarkivaev.sim.publish.Publisher;
+import io.yarkivaev.sim.signal.Periodic;
 import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -106,7 +105,7 @@ final class EngineTest {
             }
         };
         SignalDef def = new SignalDef(
-            "hr", "bpm", new Constant(72), Optional.empty()
+            "hr", "bpm", new Periodic(new Constant(72))
         );
         Scenario scenario = new Scenario(List.of(def), List.of());
         Simulation engine = new Engine(

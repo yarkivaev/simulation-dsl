@@ -11,6 +11,10 @@ import io.yarkivaev.sim.distribution.Triangular;
 import io.yarkivaev.sim.distribution.Uniform;
 import io.yarkivaev.sim.event.Occurrence;
 import io.yarkivaev.sim.event.PeriodicOccurrence;
+import io.yarkivaev.sim.signal.Noisy;
+import io.yarkivaev.sim.signal.Periodic;
+import io.yarkivaev.sim.signal.Signal;
+import io.yarkivaev.sim.signal.Sinusoidal;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.SecureASTCustomizer;
 import java.time.Duration;
@@ -122,6 +126,13 @@ public final class GroovyScript implements Script {
                 return new Poisson(number(args[0]), rng);
             }
         });
+        binding.setVariable("sinusoidal", new Closure<Signal>(null) {
+            public Signal call(final Object... args) {
+                return new Sinusoidal(
+                    number(args[0]), number(args[1]), (Duration) args[2]
+                );
+            }
+        });
         binding.setVariable("hours", new Closure<Duration>(null) {
             public Duration call(final Object... args) {
                 return Duration.ofHours(((Number) args[0]).longValue());
@@ -183,11 +194,15 @@ public final class GroovyScript implements Script {
      * Chainable builder collecting signal definition attributes.
      *
      * <p>Used internally by the DSL to build {@link SignalDef} instances
-     * through method chaining.
+     * through method chaining. Accepts either a {@code distribution} (wrapped
+     * in {@link Periodic}) or a {@code formula} (stored directly as a
+     * {@link Signal}), and optionally decorates the result with {@link Noisy}
+     * when a noise distribution is applied.
      *
      * <p>Example usage (from Groovy DSL):
      * <pre>
      *   signal "hr" unit "bpm" distribution normal(75, 5) noise uniform(-1, 1)
+     *   signal "bp" unit "mmHg" formula sinusoidal(120, 10, seconds(60))
      * </pre>
      */
     static final class SignalChain {
@@ -203,7 +218,8 @@ public final class GroovyScript implements Script {
         private final List<SignalDef> target;
 
         /**
-         * Source of randomness.
+         * Source of randomness (unused directly; retained for symmetry with
+         * {@link ProcedureChain} sub-signals).
          */
         private final Random rng;
 
@@ -213,9 +229,9 @@ public final class GroovyScript implements Script {
         private String measurement = "";
 
         /**
-         * Base value distribution.
+         * Base signal source (either a wrapped distribution or a formula).
          */
-        private Distribution dist;
+        private Signal source;
 
         /**
          * Additive noise distribution.
@@ -251,39 +267,59 @@ public final class GroovyScript implements Script {
         }
 
         /**
-         * Sets the base distribution and adds the definition.
+         * Sets the base distribution, wrapping it in a {@link Periodic}
+         * signal that resamples on every tick.
          *
          * @param distribution base value distribution
          * @return this chain
          */
         SignalChain distribution(final Distribution distribution) {
-            this.dist = distribution;
-            this.target.removeIf(s -> s.name().equals(this.name));
-            this.target.add(new SignalDef(
-                this.name, this.measurement, this.dist,
-                this.noiseDist != null
-                    ? Optional.of(this.noiseDist)
-                    : Optional.empty()
-            ));
+            this.source = new Periodic(distribution);
+            this.emit();
             return this;
         }
 
         /**
-         * Sets the noise distribution and updates the definition.
+         * Sets the signal directly from a formula (e.g. a {@link Sinusoidal}).
+         *
+         * @param signal time-parameterised signal source
+         * @return this chain
+         */
+        SignalChain formula(final Signal signal) {
+            this.source = signal;
+            this.emit();
+            return this;
+        }
+
+        /**
+         * Sets the additive noise distribution and re-emits the definition
+         * wrapped in a {@link Noisy} decorator.
          *
          * @param noise additive noise distribution
          * @return this chain
          */
         SignalChain noise(final Distribution noise) {
             this.noiseDist = noise;
-            this.target.removeIf(s -> s.name().equals(this.name));
-            if (this.dist != null) {
-                this.target.add(new SignalDef(
-                    this.name, this.measurement,
-                    this.dist, Optional.of(this.noiseDist)
-                ));
-            }
+            this.emit();
             return this;
+        }
+
+        /**
+         * Rebuilds the signal definition from the current source and noise
+         * and replaces any previously-emitted entry for the same name.
+         */
+        private void emit() {
+            if (this.source == null) {
+                return;
+            }
+            this.target.removeIf(s -> s.name().equals(this.name));
+            Signal built = this.source;
+            if (this.noiseDist != null) {
+                built = new Noisy(built, this.noiseDist);
+            }
+            this.target.add(
+                new SignalDef(this.name, this.measurement, built)
+            );
         }
     }
 

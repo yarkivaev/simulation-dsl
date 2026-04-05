@@ -5,8 +5,6 @@ import io.yarkivaev.sim.dsl.ProcedureDef;
 import io.yarkivaev.sim.dsl.Scenario;
 import io.yarkivaev.sim.dsl.SignalDef;
 import io.yarkivaev.sim.publish.Publisher;
-import io.yarkivaev.sim.signal.Noisy;
-import io.yarkivaev.sim.signal.Periodic;
 import io.yarkivaev.sim.signal.Signal;
 import java.time.Duration;
 import java.time.Instant;
@@ -106,11 +104,9 @@ public final class Engine implements Simulation {
         }
         List<NamedSignal> signals = new ArrayList<>();
         for (SignalDef def : this.scenario.signals()) {
-            Signal signal = new Periodic(def.distribution());
-            if (def.noise().isPresent()) {
-                signal = new Noisy(signal, def.noise().get());
-            }
-            signals.add(new NamedSignal(def.name(), def.unit(), signal));
+            signals.add(
+                new NamedSignal(def.name(), def.unit(), def.signal())
+            );
         }
         this.ticker = new ScheduledTicker();
         this.ticker.schedule(() -> tick(signals), this.interval);
@@ -167,8 +163,7 @@ public final class Engine implements Simulation {
                     payload.addProperty("event", "start");
                     payload.addProperty("duration", duration);
                     for (SignalDef sig : proc.signals()) {
-                        Signal signal = new Periodic(sig.distribution());
-                        double value = signal.value(now);
+                        double value = sig.signal().value(now);
                         payload.addProperty("value",
                             Math.round(value * 100.0) / 100.0
                         );

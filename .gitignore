@@ -12,6 +12,7 @@ dist/
 .idea/
 *.iml
 .vscode/
+.metals/
 
 # OS
 .DS_Store

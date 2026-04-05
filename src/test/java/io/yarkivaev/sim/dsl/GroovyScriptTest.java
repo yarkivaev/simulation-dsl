@@ -1,9 +1,11 @@
 package io.yarkivaev.sim.dsl;
 
 import org.junit.jupiter.api.Test;
+import java.time.Instant;
 import java.util.Random;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -53,11 +55,12 @@ final class GroovyScriptTest {
     void parsesSignalWithNoise() {
         Script script = new GroovyScript(new Random(4));
         Scenario scenario = script.evaluate(
-            "signal \"spo2\" unit \"%\" distribution normal(98, 1) noise uniform(-0.5, 0.5)"
+            "signal \"spo2\" unit \"%\" distribution constant(98) noise constant(2)"
         );
         assertThat(
-            "Signal noise distribution was not present",
-            scenario.signals().get(0).noise().isPresent(), is(true)
+            "Signal with constant noise did not add base and noise values",
+            scenario.signals().get(0).signal().value(Instant.EPOCH),
+            equalTo(100.0)
         );
     }
 
@@ -164,6 +167,32 @@ final class GroovyScriptTest {
         assertThat(
             "Poisson distribution signal was not parsed",
             scenario.signals(), hasSize(1)
+        );
+    }
+
+    @Test
+    void parsesFormulaSinusoidalSignal() {
+        Script script = new GroovyScript(new Random(13));
+        Scenario scenario = script.evaluate(
+            "signal \"hr\" unit \"bpm\" formula sinusoidal(80, 5, seconds(4))"
+        );
+        assertThat(
+            "Formula sinusoidal signal did not return the baseline at the Unix epoch",
+            scenario.signals().get(0).signal().value(Instant.EPOCH),
+            closeTo(80.0, 1.0e-9)
+        );
+    }
+
+    @Test
+    void wrapsFormulaInNoisyWhenNoiseIsProvided() {
+        Script script = new GroovyScript(new Random(14));
+        Scenario scenario = script.evaluate(
+            "signal \"hr\" unit \"bpm\" formula sinusoidal(50, 10, seconds(8)) noise constant(3)"
+        );
+        assertThat(
+            "Constant noise was not added to the formula signal value at the epoch",
+            scenario.signals().get(0).signal().value(Instant.EPOCH),
+            closeTo(53.0, 1.0e-9)
         );
     }
 }

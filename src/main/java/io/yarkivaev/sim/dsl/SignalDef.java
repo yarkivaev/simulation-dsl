@@ -1,28 +1,28 @@
 package io.yarkivaev.sim.dsl;
 
-import io.yarkivaev.sim.distribution.Distribution;
-import java.util.Optional;
+import io.yarkivaev.sim.signal.Signal;
 
 /**
- * Definition of a continuous signal from DSL parsing.
+ * Definition of a named signal source from DSL parsing.
+ *
+ * <p>Carries a fully-formed {@link Signal} produced by the DSL chain, so
+ * downstream consumers (Engine, burst-mode historical generators) do not
+ * need to know whether the signal came from a distribution, a formula, or
+ * a noisy decorator — they just call {@code def.signal().value(instant)}.
  *
  * <p>Example usage:
  * <pre>
  *   SignalDef def = new SignalDef(
- *       "heart_rate", "bpm", dist, Optional.of(noise)
+ *       "heart_rate", "bpm",
+ *       new Noisy(new Sinusoidal(75, 5, Duration.ofSeconds(60)),
+ *                 new Uniform(-1, 1, rng))
  *   );
- *   String name = def.name();
+ *   double value = def.signal().value(Instant.now());
  * </pre>
  *
  * @param name signal identifier
  * @param unit measurement unit
- * @param distribution base value distribution
- * @param noise optional additive noise distribution
+ * @param signal fully-formed signal source
  */
-public record SignalDef(
-    String name,
-    String unit,
-    Distribution distribution,
-    Optional<Distribution> noise
-) {
+public record SignalDef(String name, String unit, Signal signal) {
 }
