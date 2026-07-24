@@ -38,7 +38,16 @@ public final class ScheduledTicker implements Ticker {
     @Override
     public void schedule(final Runnable task, final Duration interval) {
         this.executor.scheduleAtFixedRate(
-            task, 0, interval.toMillis(), TimeUnit.MILLISECONDS
+            () -> {
+                try {
+                    task.run();
+                } catch (final RuntimeException ignored) {
+                    return;
+                }
+            },
+            0,
+            interval.toMillis(),
+            TimeUnit.MILLISECONDS
         );
     }
 

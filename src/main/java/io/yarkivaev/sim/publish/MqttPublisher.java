@@ -55,21 +55,20 @@ public final class MqttPublisher implements Publisher {
      */
     @Override
     public void publish(final String topic, final String payload) {
-        try {
-            MqttMessage message = new MqttMessage(
-                payload.getBytes(StandardCharsets.UTF_8)
-            );
-            message.setQos(1);
-            this.client.publish(topic, message);
-        } catch (MqttException ex) {
-            throw new IllegalStateException(
-                String.format(
-                    "Cannot publish to topic '%s': %s",
-                    topic, ex.getMessage()
-                ),
-                ex
-            );
+        final byte[] body = payload.getBytes(StandardCharsets.UTF_8);
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                final MqttMessage message = new MqttMessage(body);
+                message.setQos(1);
+                this.client.publish(topic, message);
+                return;
+            } catch (final MqttException ex) {
+                sleep(topic, ex);
+            }
         }
+        throw new IllegalStateException(
+            String.format("Publish interrupted for topic '%s'", topic)
+        );
     }
 
     /**
@@ -88,6 +87,21 @@ public final class MqttPublisher implements Publisher {
                     "Cannot close MQTT client: %s", ex.getMessage()
                 ),
                 ex
+            );
+        }
+    }
+
+    private void sleep(final String topic, final MqttException failure) {
+        try {
+            Thread.sleep(1000L);
+        } catch (final InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                String.format(
+                    "Cannot publish to topic '%s': %s",
+                    topic, failure.getMessage()
+                ),
+                failure
             );
         }
     }
