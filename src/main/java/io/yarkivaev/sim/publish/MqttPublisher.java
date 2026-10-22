@@ -2,12 +2,16 @@ package io.yarkivaev.sim.publish;
 
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
+import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
-import org.eclipse.paho.mqttv5.common.MqttMessage;
 import java.nio.charset.StandardCharsets;
 
 /**
  * MQTT v5 publisher using Eclipse Paho client.
+ *
+ * <p>Readings go out at QoS 0 through an in-memory store. The next tick
+ * replaces the value, and waiting for a QoS 1 acknowledgement stalled the
+ * tick for seconds.
  *
  * <p>Example usage:
  * <pre>
@@ -31,7 +35,7 @@ public final class MqttPublisher implements Publisher {
      */
     public MqttPublisher(final String url, final String id) {
         try {
-            this.client = new MqttClient(url, id);
+            this.client = new MqttClient(url, id, new MemoryPersistence());
             MqttConnectionOptions options = new MqttConnectionOptions();
             options.setAutomaticReconnect(true);
             options.setCleanStart(true);
@@ -58,9 +62,7 @@ public final class MqttPublisher implements Publisher {
         final byte[] body = payload.getBytes(StandardCharsets.UTF_8);
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                final MqttMessage message = new MqttMessage(body);
-                message.setQos(1);
-                this.client.publish(topic, message);
+                this.client.publish(topic, new OutboundReading(body).message());
                 return;
             } catch (final MqttException ex) {
                 sleep(topic, ex);
